@@ -1,7 +1,7 @@
 import { IsNotEmpty, IsString, IsNumber, IsOptional } from 'class-validator';
 
 export class CreateAnimalDto {
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   name?: string;
 

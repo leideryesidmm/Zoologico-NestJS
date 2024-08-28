@@ -47,12 +47,12 @@ export class SpeciesService {
     });
     if (nameExisting && nameExisting.id != id)
       throw new HttpException(
-        `Zone with name ${updateSpeciesDto.name} already exist`,
+        `Species with name ${updateSpeciesDto.name} already exist`,
         HttpStatus.CONFLICT,
       );
-    const zoneExisting = await this.zoneService.findOne(
-      updateSpeciesDto.zoneId,
-    );
+
+    if (updateSpeciesDto.zoneId)
+      await this.zoneService.findOne(updateSpeciesDto.zoneId);
 
     let species = plainToClass(Species, updateSpeciesDto);
     species.id = id;
@@ -76,11 +76,17 @@ export class SpeciesService {
   }
 
   findAll() {
-    return this.speciesRepository.find();
+    try {
+      return this.speciesRepository.find();
+    } catch (e) {
+      throw new HttpException(
+        `Ha ocurrido un error: ${e}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   findAllByUser(user: any) {
-    console.log(user);
     return this.speciesRepository.find({
       relations: ['zoneId'],
       where: { zoneId: { jefeId: { id: user.id } } },

@@ -12,11 +12,11 @@ import {
 export class Animal {
   @PrimaryGeneratedColumn()
   id: number;
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   name: string;
   @ManyToOne(() => Species, { nullable: false })
   @JoinColumn({ name: 'species_id' })
-  species: Species;
+  speciesId: Species;
   @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 }

@@ -38,10 +38,16 @@ export class ZonesService {
   }
 
   findAll() {
-    return this.zoneRepository.find();
+    try {
+      return this.zoneRepository.find();
+    } catch (e) {
+      throw new HttpException(
+        `Ha ocurrido un error: ${e}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
   findAllByUser(user: any) {
-    console.log(user);
     return this.zoneRepository.find({
       relations: ['jefeId'],
       where: { jefeId: { id: user.id } },
@@ -88,13 +94,14 @@ export class ZonesService {
         `Zone with name ${updateZoneDto.name} already exist`,
         HttpStatus.CONFLICT,
       );
-    const jefeExisting = await this.userService.findOne(updateZoneDto.jefeId);
-    if (!jefeExisting || jefeExisting.role !== Role.JEFE)
-      throw new HttpException(
-        `Boss with id ${updateZoneDto.jefeId} not exist or is an employee`,
-        HttpStatus.CONFLICT,
-      );
-
+    if (updateZoneDto.jefeId) {
+      const jefeExisting = await this.userService.findOne(updateZoneDto.jefeId);
+      if (!jefeExisting || jefeExisting.role !== Role.JEFE)
+        throw new HttpException(
+          `Boss with id ${updateZoneDto.jefeId} not exist or is an employee`,
+          HttpStatus.CONFLICT,
+        );
+    }
     let zone = plainToClass(Zone, updateZoneDto);
     zone.id = id;
 

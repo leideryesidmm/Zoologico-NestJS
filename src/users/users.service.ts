@@ -29,7 +29,14 @@ export class UsersService {
   }
 
   findAll() {
-    return this.userRepository.find();
+    try {
+      return this.userRepository.find();
+    } catch (e) {
+      throw new HttpException(
+        `Ha ocurrido un error: ${e}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   async findOne(id: number) {
@@ -46,11 +53,9 @@ export class UsersService {
     });
   }
   async findByEmail(email: string) {
-    console.log(email);
     const user = await this.userRepository.findOne({
       where: { userEmail: email },
     });
-    console.log(user);
     if (!user) {
       throw new HttpException('User not found', HttpStatus.NOT_FOUND);
     }
