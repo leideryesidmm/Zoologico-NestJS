@@ -1,34 +1,42 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
-import { UpdateCommentDto } from './dto/update-comment.dto';
+import { Role } from 'src/users/entities/Role.enum';
+import { Roles } from 'src/common/role.decorator';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 
 @Controller('comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
-  create(@Body() createCommentDto: CreateCommentDto) {
-    return this.commentsService.create(createCommentDto);
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.JEFE, Role.EMPLOYEE)
+  create(@Req() req: Request, @Body() createCommentDto: CreateCommentDto) {
+    const user = req['user'];
+    return this.commentsService.create(user, createCommentDto);
   }
 
-  @Get()
-  findAll() {
-    return this.commentsService.findAll();
+  @Get('/comments-answers/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.JEFE, Role.EMPLOYEE)
+  findAllByAnimal(@Param('id') id: string) {
+    return this.commentsService.findAllByAnimal(+id);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.commentsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCommentDto: UpdateCommentDto) {
-    return this.commentsService.update(+id, updateCommentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.commentsService.remove(+id);
+  @Get('/percentage-answers-comments')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  getPercentage() {
+    return this.commentsService.getPercentage();
   }
 }

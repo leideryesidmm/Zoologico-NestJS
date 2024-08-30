@@ -10,10 +10,10 @@ import { AuthService } from './auth.service';
 import { CreateBossDto } from './dto/create-boss.dto';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
-import { AuthGuard } from './guards/auth.guard';
+import { AuthGuard } from '../common/guards/auth.guard';
 import { Roles } from 'src/common/role.decorator';
 import { Role } from 'src/users/entities/Role.enum';
-import { RolesGuard } from './guards/roles.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
 
 @Controller('auth')
 export class AuthController {

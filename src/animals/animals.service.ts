@@ -1,16 +1,23 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Animal } from './entities/animal.entity';
 import { SpeciesService } from 'src/species/species.service';
-import { ILike, Repository } from 'typeorm';
+import { Between, ILike, Repository } from 'typeorm';
 import { plainToClass } from 'class-transformer';
 
 @Injectable()
 export class AnimalsService {
   constructor(
     @InjectRepository(Animal) private animalRepository: Repository<Animal>,
+    @Inject(forwardRef(() => SpeciesService))
     private speciesService: SpeciesService,
   ) {}
   async create(createAnimalDto: CreateAnimalDto) {
@@ -24,17 +31,15 @@ export class AnimalsService {
         `Animal with name ${createAnimalDto.name} already exist`,
         HttpStatus.CONFLICT,
       );
-    const species = await this.speciesService.findOne(
-      createAnimalDto.speciesId,
-    );
+    await this.speciesService.findOne(createAnimalDto.speciesId);
     let animal = plainToClass(Animal, createAnimalDto);
     let animalSaved = await this.animalRepository.save(animal);
     return { id: animalSaved.id };
   }
 
-  findAll() {
+  async findAll() {
     try {
-      return this.animalRepository.find();
+      return await this.animalRepository.find();
     } catch (e) {
       throw new HttpException(
         `Ha ocurrido un error: ${e}`,
@@ -51,15 +56,20 @@ export class AnimalsService {
   }
   async findOne(id: number) {
     if (!id) throw new HttpException('There is not ID', HttpStatus.BAD_REQUEST);
-    return this.animalRepository.findOneBy({ id }).then((animal) => {
-      if (!animal) {
-        throw new HttpException(
-          `Animal with id: ${id} not found`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-      return animal;
-    });
+    return this.animalRepository
+      .findOne({
+        where: { id },
+        relations: ['speciesId', 'speciesId.zoneId.jefeId'],
+      })
+      .then((animal) => {
+        if (!animal) {
+          throw new HttpException(
+            `Animal with id: ${id} not found`,
+            HttpStatus.NOT_FOUND,
+          );
+        }
+        return animal;
+      });
   }
 
   async update(id: number, updateAnimalDto: UpdateAnimalDto) {
@@ -85,7 +95,36 @@ export class AnimalsService {
     return { id: animal.id };
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} animal`;
+  async countByZone(id: number) {
+    const amount = await this.animalRepository.countBy({
+      speciesId: { zoneId: { id: id } },
+    });
+    return { amount };
+  }
+
+  async countBySpecies(id: number) {
+    const amount = await this.animalRepository.countBy({
+      speciesId: { id: id },
+    });
+    return { amount };
+  }
+
+  async findByCreatedDate(date: Date) {
+    const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
+    const animals = await this.animalRepository.find({
+      where: {
+        createdAt: Between(startOfDay, endOfDay),
+      },
+    });
+
+    return { animals };
+  }
+
+  async remove(id: number) {
+    const existingAnimal = await this.findOne(id);
+    this.animalRepository.delete(existingAnimal.id);
+    return existingAnimal;
   }
 }

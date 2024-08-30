@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { CreateSpeciesDto } from './dto/create-species.dto';
 import { UpdateSpeciesDto } from './dto/update-species.dto';
 import { ZonesService } from 'src/zones/zones.service';
@@ -6,11 +12,16 @@ import { Species } from './entities/species.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import { plainToClass } from 'class-transformer';
+import { AnimalsService } from 'src/animals/animals.service';
 
 @Injectable()
 export class SpeciesService {
   constructor(
     @InjectRepository(Species) private speciesRepository: Repository<Species>,
+    @Inject(forwardRef(() => AnimalsService))
+    private animalService: AnimalsService,
+
+    @Inject(forwardRef(() => ZonesService))
     private zoneService: ZonesService,
   ) {}
   async create(createSpeciesDto: CreateSpeciesDto) {
@@ -24,7 +35,7 @@ export class SpeciesService {
         `Species with name ${createSpeciesDto.name} already exist`,
         HttpStatus.CONFLICT,
       );
-    const zone = await this.zoneService.findOne(createSpeciesDto.zoneId);
+    await this.zoneService.findOne(createSpeciesDto.zoneId);
     let species = plainToClass(Species, createSpeciesDto);
     let speciesSaved = await this.speciesRepository.save(species);
     return { id: speciesSaved.id };
@@ -75,9 +86,9 @@ export class SpeciesService {
     });
   }
 
-  findAll() {
+  async findAll() {
     try {
-      return this.speciesRepository.find();
+      return await this.speciesRepository.find();
     } catch (e) {
       throw new HttpException(
         `Ha ocurrido un error: ${e}`,
@@ -93,7 +104,16 @@ export class SpeciesService {
     });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} species`;
+  async remove(id: number) {
+    const species = await this.findOne(id);
+    const amount = await this.animalService.countBySpecies(species.id);
+    if (amount.amount > 0) {
+      throw new HttpException(
+        'A species with associated animals cannot be eliminated.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    this.speciesRepository.delete(species.id);
+    return species;
   }
 }

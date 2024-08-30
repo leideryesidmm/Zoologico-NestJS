@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  forwardRef,
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+} from '@nestjs/common';
 import { CreateZoneDto } from './dto/create-zone.dto';
 import { UpdateZoneDto } from './dto/update-zone.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -7,12 +13,15 @@ import { ILike, Repository } from 'typeorm';
 import { UsersService } from 'src/users/users.service';
 import { Role } from 'src/users/entities/Role.enum';
 import { plainToClass } from 'class-transformer';
+import { AnimalsService } from 'src/animals/animals.service';
 
 @Injectable()
 export class ZonesService {
   constructor(
     @InjectRepository(Zone) private zoneRepository: Repository<Zone>,
     private userService: UsersService,
+    @Inject(forwardRef(() => AnimalsService))
+    private animalService: AnimalsService,
   ) {}
   async create(createZoneDto: CreateZoneDto) {
     const nameExisting = await this.zoneRepository.findOne({
@@ -37,9 +46,9 @@ export class ZonesService {
     return { id: zone.id };
   }
 
-  findAll() {
+  async findAll() {
     try {
-      return this.zoneRepository.find();
+      return await this.zoneRepository.find();
     } catch (e) {
       throw new HttpException(
         `Ha ocurrido un error: ${e}`,
@@ -110,9 +119,16 @@ export class ZonesService {
     return { id: zone.id };
   }
 
-  remove(id: number) {
-    const zone = this.findOne(id);
-
+  async remove(id: number) {
+    const zone = await this.findOne(id);
+    const amount = await this.animalService.countByZone(zone.id);
+    if (amount.amount > 0) {
+      throw new HttpException(
+        'A zone with associated animals cannot be eliminated.',
+        HttpStatus.CONFLICT,
+      );
+    }
+    this.zoneRepository.delete(zone.id);
     return zone;
   }
 }

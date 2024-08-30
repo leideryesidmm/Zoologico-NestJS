@@ -23,14 +23,14 @@ export class UsersService {
       throw new HttpException('Email already in use', HttpStatus.CONFLICT);
     }
     return this.userRepository.save(user).then((user) => {
-      const { id, ...result } = user;
+      const { id } = user;
       return { id };
     });
   }
 
-  findAll() {
+  async findAll() {
     try {
-      return this.userRepository.find();
+      return await this.userRepository.find();
     } catch (e) {
       throw new HttpException(
         `Ha ocurrido un error: ${e}`,
@@ -41,16 +41,21 @@ export class UsersService {
 
   async findOne(id: number) {
     if (!id) throw new HttpException('There is not ID', HttpStatus.BAD_REQUEST);
-    return this.userRepository.findOneBy({ id }).then((user) => {
-      if (!user) {
-        throw new HttpException(
-          `User with id: ${id} not found`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-      const { pass, ...result } = user;
-      return result;
-    });
+    return this.userRepository
+      .findOne({
+        where: { id },
+        relations: ['jefeId'],
+      })
+      .then((user) => {
+        if (!user) {
+          throw new HttpException(
+            `User with id: ${id} not found`,
+            HttpStatus.NOT_FOUND,
+          );
+        }
+        const { pass, ...result } = user;
+        return result;
+      });
   }
   async findByEmail(email: string) {
     const user = await this.userRepository.findOne({

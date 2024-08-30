@@ -3,7 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
   Param,
   Delete,
   UseGuards,
@@ -15,8 +14,8 @@ import { CreateAnimalDto } from './dto/create-animal.dto';
 import { UpdateAnimalDto } from './dto/update-animal.dto';
 import { Role } from 'src/users/entities/Role.enum';
 import { Roles } from 'src/common/role.decorator';
-import { AuthGuard } from 'src/auth/guards/auth.guard';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 
 @Controller('animals')
 export class AnimalsController {
@@ -41,6 +40,27 @@ export class AnimalsController {
   findAllbyUsery(@Req() req: Request) {
     const user = req['user'];
     return this.animalsService.findAllByUser(user);
+  }
+
+  @Get('countByZone/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  countByZone(@Param('id') id: string) {
+    return this.animalsService.countByZone(+id);
+  }
+  @Get('countBySpecies/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  countBySpecies(@Param('id') id: string) {
+    return this.animalsService.countBySpecies(+id);
+  }
+
+  @Get('findByCreatedDate/:date')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  findByCreatedDate(@Param('date') date: Date) {
+    const convertedDate = new Date(date);
+    return this.animalsService.findByCreatedDate(convertedDate);
   }
 
   @Get(':id')

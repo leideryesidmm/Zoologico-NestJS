@@ -4,7 +4,6 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
-  Unique,
 } from 'typeorm';
 import { Role } from './Role.enum';
 
